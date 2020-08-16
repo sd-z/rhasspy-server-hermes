@@ -849,6 +849,7 @@ async def api_listen_for_command() -> Response:
             NluQuery(
                 id=session_id,
                 input=text_captured.text,
+                implicit=False,
                 site_id=core.site_id,
                 session_id=session_id,
                 intent_filter=intent_filter,
@@ -1356,7 +1357,8 @@ async def api_text_to_intent():
     else:
         user_entities = []
 
-    if no_hass:
+    implicit = request.args.get("implicit", "false").lower() == "true"
+    if (no_hass or implicit):
         # Temporarily disable intent handling
         core.publish(HandleToggleOff(site_id=core.site_id))
 
@@ -1364,13 +1366,14 @@ async def api_text_to_intent():
         # Convert text to intent
         intent_dict = await text_to_intent_dict(
             text,
+            implicit=implicit,
             intent_filter=intent_filter,
             output_format=output_format,
-            user_entities=user_entities,
+            user_entities=user_entities
         )
         return jsonify(intent_dict)
     finally:
-        if no_hass:
+        if (no_hass or implicit):
             # Re-enable intent handling
             core.publish(HandleToggleOn(site_id=core.site_id))
 
@@ -2540,15 +2543,16 @@ def prefers_json() -> bool:
 
 
 async def text_to_intent_dict(
-    text,
-    intent_filter: typing.Optional[typing.List[str]] = None,
-    output_format="rhasspy",
-    user_entities=typing.Optional[typing.List[typing.Tuple[str, str]]],
+            text,
+            implicit: bool = False,
+            intent_filter: typing.Optional[typing.List[str]] = None,
+            output_format="rhasspy",
+            user_entities=typing.Optional[typing.List[typing.Tuple[str, str]]]
 ):
     """Convert transcription to either Rhasspy or Hermes JSON format."""
     assert core is not None
     start_time = time.perf_counter()
-    result = await core.recognize_intent(text, intent_filter=intent_filter)
+    result = await core.recognize_intent(text, implicit=implicit, intent_filter=intent_filter)
 
     # Add user-defined entities
     if user_entities and isinstance(result, NluIntent):

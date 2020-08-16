@@ -476,7 +476,10 @@ class RhasspyCore:
     # -------------------------------------------------------------------------
 
     async def recognize_intent(
-        self, text: str, intent_filter: typing.Optional[typing.List[str]] = None
+                        self,
+                        text: str,
+                        implicit: bool = False,
+                        intent_filter: typing.Optional[typing.List[str]] = None
     ) -> typing.Union[NluIntent, NluIntentNotRecognized]:
         """Send an NLU query and wait for intent or not recognized"""
         if self.nlu_system == "dummy":
@@ -486,6 +489,7 @@ class RhasspyCore:
         query = NluQuery(
             id=nlu_id,
             input=text,
+            implicit=implicit,
             intent_filter=intent_filter,
             site_id=self.site_id,
             session_id=nlu_id,
@@ -496,7 +500,7 @@ class RhasspyCore:
                 _, message = yield
 
                 if isinstance(
-                    message, (NluIntent, NluIntentNotRecognized, NluError)
+                        message, (NluIntent, NluIntentNotRecognized, NluError)
                 ) and (message.session_id == nlu_id):
                     return message
 
